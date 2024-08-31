@@ -1,4 +1,4 @@
-import { ChangeEvent, FocusEvent, useState } from "react";
+import { ChangeEvent, FocusEvent, useEffect, useRef, useState } from "react";
 import Validator from "../utils/validator";
 import { ERROR_MESSAGE, REGEX } from "../constants";
 import getCardBrand from "../utils/getCardBrand";
@@ -14,6 +14,9 @@ const useCardNumber = (initialValue: string) => {
     isValid: true,
     errorMessage: "",
   });
+
+  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const assignCardBrandFromNumber = (cardNumber: string) => {
     const cardBrand = getCardBrand(cardNumber);
@@ -51,17 +54,7 @@ const useCardNumber = (initialValue: string) => {
     const formattedValue = formattingCardNumber(valueWithoutSpace);
     updateByNameAndValue(formattedValue);
 
-    setTimeout(() => {
-      if (selectionStart === null) return;
-
-      if (formattedValue[selectionStart - 1] === " ") {
-        const newSelectionStart =
-          formattedValue.length > value.length ? selectionStart + 1 : selectionStart - 1;
-
-        return e.target.setSelectionRange(newSelectionStart, newSelectionStart);
-      }
-      e.target.setSelectionRange(selectionStart, selectionStart);
-    });
+    setCursorPosition(selectionStart);
   };
 
   const handleCardNumberBlur = (e: FocusEvent<HTMLInputElement>) => {
@@ -82,12 +75,30 @@ const useCardNumber = (initialValue: string) => {
     });
   };
 
+  useEffect(() => {
+    if (cursorPosition === null || !inputRef.current) return;
+
+    const input = inputRef.current;
+    const formattedValue = inputValue;
+
+    if (formattedValue[cursorPosition - 1] === " ") {
+      const newCursorPosition =
+        formattedValue.length > input.value.length ? cursorPosition + 1 : cursorPosition - 1;
+      input.setSelectionRange(newCursorPosition, newCursorPosition);
+    } else {
+      input.setSelectionRange(cursorPosition, cursorPosition);
+    }
+
+    setCursorPosition(null);
+  }, [inputValue, cursorPosition]);
+
   return {
     inputValue,
     validationResult,
     brandType,
     handleCardNumberChange,
     handleCardNumberBlur,
+    inputRef,
   } as const;
 };
 
